@@ -45,5 +45,5 @@ acc_df <- data.frame(Error = c("train", "test"), nn_base = c(train_acc, test_acc
 
 
 saveRDS(model, file.path("..", "output", "nn-base.rds"))
-saveRDS(acc_df, file.path("..", "output", "acc_df.rds")
+saveRDS(acc_df, file.path("..", "output", "acc_df.rds"))
 

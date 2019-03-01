@@ -36,7 +36,7 @@ test_actual <- abalone_test_set %>%
     factor
 
 # Settings
-iterations <-50
+iterations <-500
 
 # maxfactor <- function(x) {
 #   return(which(x == max(x)))
@@ -90,21 +90,20 @@ ptm <- proc.time()
 # layer nodes -> 33 weights. So the genetic algorithm is going to be adjusting 
 # 143 values, that are the weights of the new_model to optimize it. 
 
-monitor_func <- function(obj) 
-{ 
-    contour(x1, x2, f, drawlabels = FALSE, col = grey(0.5))
-    title(paste("iteration =", obj@iter), font.main = 1)
-    points(obj@population, pch = 20, col = 2)
-    Sys.sleep(0.2)
-}
+# monitor_func <- function(obj) 
+# { 
+#     contour(x1, x2, f, drawlabels = FALSE, col = grey(0.5))
+#     title(paste("iteration =", obj@iter), font.main = 1)
+#     points(obj@population, pch = 20, col = 2)
+#     Sys.sleep(0.2)
+# }
 
 ga_result <- ga(type = "real-valued",
                 fitness = fit_func_edit,
                 lower = rep(-3,143),
                 upper = rep(3,143),
                 popSize = 1000,
-                maxiter = iterations,
-                monitor = monitor_func)
+                maxiter = iterations)
 
 cat("            Time:",(proc.time() - ptm),"\n")
 cat(" Optimal Weights:",ga_result@solution[1,],"\n")
@@ -117,26 +116,24 @@ for(j in 1:3){
     new_model$weights[[1]][[2]][,j] <- ga_result@solution[1,][((111 + 11*(j-1))):(110 + (11*j))]
 }
 
-prediction <- compute(new_model, abalone_train_set[!names(abalone_train_set) %in% c("young" ,"middling", "old")])$net.result %>% 
+train_pred <- compute(new_model, abalone_train_set[!names(abalone_train_set) %in% c("young" ,"middling", "old")])$net.result %>% 
     max.col %>% 
     factor
 
-confusionMatrix(prediction, train_actual)
+train_acc <- confusionMatrix(train_pred, train_actual)$overall["Accuracy"]
 
 test_pred <- compute(new_model, abalone_test_set[!names(abalone_test_set) %in% c("young" ,"middling", "old")])$net.result %>% 
     max.col %>% 
     factor
 
-confusionMatrix(test_pred, test_actual)
+test_acc <- confusionMatrix(test_pred, test_actual)$overall["Accuracy"]
 
+acc_df <- readRDS(file.path("..", "output", "acc_df.rds"))
 
+acc_df <- acc_df %>% 
+        mutate(ga = c(train_acc, test_acc))
 
-# cat("        Accuracy:",sum(prediction == testing_set$Diagnosis)/sum(result),"\n")
-# 
-# CrossTable(x = testing_set$Diagnosis, 
-#            y = prediction,
-#            prop.r = FALSE,
-#            prop.c = FALSE,
-#            prop.t = FALSE,
-#            prop.chisq = FALSE,
-#            dnn = c("Actual", "Prediction"))  
+saveRDS(new_model, file.path("..", "output", "ga_nn_model.rds"))
+saveRDS(ga_result, file.path("..", "output", "ga_nn.rds"))
+saveRDS(acc_df, file.path("..", "output", "acc_df.rds"))
+
