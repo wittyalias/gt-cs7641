@@ -20,7 +20,7 @@ test_actual <- abalone_test_set %>%
         max.col %>% 
         factor
 
-
+start_time <- Sys.time()
 # Create our neural network model
 model <- neuralnet(formula = f,
                  data = abalone_train_set,
@@ -28,6 +28,8 @@ model <- neuralnet(formula = f,
                  algorithm = "backprop",
                  threshold = 0.5,
                  learningrate = 0.0001)
+
+end_time <-  Sys.time()
 
 abalone_map <- data.frame(age = c("young" ,"middling", "old"), model_result = 1:3)
 
@@ -41,7 +43,14 @@ model_results <- model$net.result[[1]] %>%
 
 train_acc <- confusionMatrix(model_results, train_actual)$overall["Accuracy"]
 test_acc <- confusionMatrix(nn_test_results, test_actual)$overall["Accuracy"]
-acc_df <- data.frame(Error = c("train", "test"), nn_base = c(train_acc, test_acc))
+acc_df <- data.frame(Metric = c("Training Error", 
+                                "Test Error", 
+                                "Iterations", 
+                                "Total time"), 
+                     nn_base = c(train_acc, 
+                                 test_acc, 
+                                 model$result.matrix["steps",], 
+                                 difftime(end_time, start_time, units = "secs")))
 
 
 saveRDS(model, file.path("..", "output", "nn-base.rds"))

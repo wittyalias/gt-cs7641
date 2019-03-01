@@ -1,170 +1,211 @@
-# Nathan Harmon
-# CS7641, Spring 2015, Randomized Optimization Assignment
-# Simulated Annealing Weighting of Pima Indians Neural Network
+# CS7641, Randomized Optimization Assignment
+# Simulated Annealing Weighting 
 
 # Uncomment if you need to install
 #install.packages("neuralnet")
 #install.packages("gmodels")
 
-require("neuralnet")
-require("gmodels")
+library("neuralnet")
+library("caret")
+library("gtools")
 
-# Settings
-iterations <- 100
 
-# Functions
-normalize <- function(x) {
-  return ((x - min(x, na.rm=TRUE)) / (max(x, na.rm=TRUE) - min(x, na.rm=TRUE)))
-}
 
-maxfactor <- function(x) {
-  return(which(x == max(x)))
-}
+set.seed(12345)
 
-# Data is from:
-# https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.data
-pimadata <- read.csv("pima-indians-diabetes.data", 
-                     header = FALSE)
+#load the data
+abalone_test_set <- readRDS(file.path("..", "input",  "abalone_test_set.rds"))
+abalone_train_set <- readRDS(file.path("..", "input",  "abalone_train_set.rds"))
 
-# Column names are from:
-# https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.names
-colnames(pimadata) <- c("Pregnancies",
-                        "GlucoseConcentration",
-                        "DiastolicBP",
-                        "TricepSkinFoldThickness",
-                        "TwoHrSerumInsulin",
-                        "BMI",
-                        "DiabetesPedigreeFunction",
-                        "Age",
-                        "Diagnosis")
+#load the model
+model <- readRDS(file = file.path("..", "output", "nn-base.rds"))
 
-# Remove Observations with Missing Data
-pimadata <- pimadata[pimadata[2] != 0 &
-                       pimadata[3] != 0 &
-                       pimadata[4] != 0 &
-                       pimadata[5] != 0 &
-                       pimadata[6] != 0 &
-                       pimadata[7] != 0 &
-                       pimadata[8] != 0, ]
+#create a new model for manipulation - keep the old one for working comparison
+new_model <- model
 
-# Normalize our data. Note this new set is not classified.
-pimadata_use <- as.data.frame(lapply(pimadata[1:8], scale))
+train_actual <- abalone_train_set %>%
+    select(young, middling, old) %>%
+    max.col %>%
+    factor(levels = c(1,2,3))
 
-# Classify the data
-pimadata_use <- cbind(pimadata_use, pimadata$Diagnosis == 1)
-pimadata_use <- cbind(pimadata_use, pimadata$Diagnosis == 0)
-names(pimadata_use)[9] <- "Diabetic"
-names(pimadata_use)[10] <- "Normal"
+test_actual <- abalone_test_set %>%
+    select(young, middling, old) %>%
+    max.col %>%
+    factor
 
-# Create our model, training and testing sets
-initial_model_set <- pimadata_use[1:(nrow(pimadata)-100), ]
-
-training_set <- pimadata_use[1:(nrow(pimadata)-100),1:8]
-training_set$Diagnosis <- as.factor(
-  as.integer(xor(1,pimadata$Diagnosis[1:(nrow(pimadata)-100)])))
-levels(training_set$Diagnosis) <- c("Diabetic", "Normal")
-
-testing_set <- pimadata_use[(nrow(pimadata)-99):nrow(pimadata),1:8]
-testing_set$Diagnosis <- as.factor(
-  as.integer(xor(1,pimadata$Diagnosis[(nrow(pimadata)-99):nrow(pimadata)])))
-levels(testing_set$Diagnosis) <- c("Diabetic", "Normal")
-
-# Create our neural network model
-model <- neuralnet(Diabetic+Normal ~
-                     Pregnancies + 
-                     GlucoseConcentration + 
-                     DiastolicBP +
-                     TricepSkinFoldThickness + 
-                     TwoHrSerumInsulin + 
-                     BMI +
-                     DiabetesPedigreeFunction + 
-                     Age,
-                   data = initial_model_set,
-                   hidden = 0)
 
 # Neural Network as Fitness Function
 
+# fit_func <- function(string=c()) {
+#   model$weights[[1]][[1]][,1] <- string[1:9]
+#   model$weights[[1]][[1]][,2] <- string[10:18]
+#   prediction <- compute(model, training_set[1:8])$net.result
+#   classification <- apply(prediction, c(1), maxfactor)
+#   prediction <- c('Diabetic', 'Normal')[classification]
+#   result <- table(prediction,training_set$Diagnosis)
+#   return(sum(prediction == training_set$Diagnosis)/sum(result))
+# }
+
 fit_func <- function(string=c()) {
-  model$weights[[1]][[1]][,1] <- string[1:9]
-  model$weights[[1]][[1]][,2] <- string[10:18]
-  prediction <- compute(model, training_set[1:8])$net.result
-  classification <- apply(prediction, c(1), maxfactor)
-  prediction <- c('Diabetic', 'Normal')[classification]
-  result <- table(prediction,training_set$Diagnosis)
-  return(sum(prediction == training_set$Diagnosis)/sum(result))
-}
 
-ideal_accuracy <- 0
-ideal_weights <- list()
-
-ptm <- proc.time()
-
-for (i in 1:iterations) {
-  weights <- sample(-1000:1000,18,replace=T)/1000
-  accuracy <- fit_func(weights)
-  #cat("---------------------------------------------------\n")
-  #cat("New Random Start:",weights)
-  #cat(" (",accuracy,")\n", sep="")
-  weight_order <- sample(1:18,18,replace=F)
-  for (j in 1:18) {
-    for (k in 1:100) {
-      new_weights <- weights
-      new_weights[weight_order[j]] <- weights[weight_order[j]] + .00235*k
-      new_accuracy <- fit_func(new_weights)
-      
-      if ( new_accuracy > accuracy) {
-        accuracy <- new_accuracy
-        weights <- new_weights
-        #at("                :",weights)
-        #cat(" (",accuracy,")\n", sep="")
-        j <- 1
-        next        
-      }
-
-      new_weights <- weights
-      new_weights[weight_order[j]] <- weights[weight_order[j]] - .00235*k
-      new_accuracy <- fit_func(new_weights)
-                                                           
-      if ( new_accuracy > accuracy) {
-        accuracy <- new_accuracy
-        weights <- new_weights
-        #cat("                :",weights)
-        #cat(" (",accuracy,")\n", sep="")
-        j <- 1
-        next        
-      }
+    # Weights for the hidden layer
+    for (j in 1:10){
+        new_model$weights[[1]][[1]][,j] <<- string[(1 + 11*(j-1)):(11*j)]
     }
-  }
-  if ( accuracy > ideal_accuracy) {
-    ideal_accuracy <- accuracy
-    ideal_weights <- weights
-    #cat("      New Optima:",weights)
-    #cat(" (",accuracy,")\n", sep="")    
-  }
-  cat("     Time:",(proc.time() - ptm))
-  cat(" Accuracy:",accuracy)
-  cat(" Ideal:",ideal_accuracy,"\n")
+    # Weights for the output layer
+    for(j in 1:3){
+        new_model$weights[[1]][[2]][,j] <<- string[((111 + 11*(j-1))):(110 + (11*j))]
+    }
+
+    prediction <- compute(new_model,
+                          abalone_train_set[!names(abalone_train_set) %in% c("young" ,"middling", "old")])$net.result %>%
+        max.col %>%
+        factor(levels = c(1,2,3))
+
+    return(confusionMatrix(prediction, train_actual)$overall["Accuracy"])
 }
 
-#cat("              Time:",(proc.time() - ptm),"\n")
-cat("\n")
-cat("   Optimal Weights:",ideal_weights[1:18],"\n")
-cat(" Training Accuracy:",ideal_accuracy,"\n")
+# Settings
+random_restarts <- 100
+start_time <- Sys.time()
 
-model$weights[[1]][[1]][,1] <- ideal_weights[1:9]
-model$weights[[1]][[1]][,2] <- ideal_weights[10:18]
+# data frame to collect information about the algorithm to compare to others
 
-prediction <- compute(model, testing_set[1:8])$net.result
-classification <- apply(prediction, c(1), maxfactor)
-prediction <- c('Diabetic', 'Normal')[classification]
-result <- table(prediction,testing_set$Diagnosis)
+rhc_table <- data.frame(iteration = 1:random_restarts,
+                       fitness = NA,
+                       start_time =  .POSIXct(rep(NA, random_restarts)),
+                       end_time =  .POSIXct(rep(NA, random_restarts)),
+                       iter_time = NA)
 
-cat("  Testing Accuracy:",sum(prediction == testing_set$Diagnosis)/sum(result),"\n")
 
-CrossTable(x = testing_set$Diagnosis, 
-           y = prediction,
-           prop.r = FALSE,
-           prop.c = FALSE,
-           prop.t = FALSE,
-           prop.chisq = FALSE,
-           dnn = c("Actual", "Prediction"))
+global_accuracy <- 0
+# global_weights <- list()
+weight_step <- 0.1
+
+# ptm <- proc.time()
+
+
+
+
+for (i in 1:random_restarts) {
+  # weights <- sample(-1000:1000,18,replace=T)/1000
+        nsteps <- 0
+        weights <- runif(143, min = -2, max = 2)
+        accuracy <- fit_func(weights)
+        current_accuracy <- accuracy
+        #cat("---------------------------------------------------\n")
+        #cat("New Random Start:",weights)
+        #cat(" (",accuracy,")\n", sep="")
+        
+        
+        # Then look at each weight, add some small amount to it and check the accuracy
+        # if the accuracy is better, adjust the weight -> move in that direction on the
+        # fitness function.
+        accuracy_improved = TRUE
+        while(accuracy_improved){
+            # Randomise the order you deal with the weights in
+            # weight_order <- sample(1:18,18,replace=F)
+            # weight_order <- gtools::permute(1:143)
+            current_accuracy <- accuracy
+        
+            for (j in 1:143){#gtools::permute(1:143)){
+                      new_weights <- weights
+                      new_weights[j] <- weights[j] + weight_step
+                      new_accuracy <- fit_func(new_weights)
+                
+                      if ( new_accuracy > accuracy) {
+                        accuracy <- new_accuracy
+                        weights <- new_weights
+                        #at("                :",weights)
+                        #cat(" (",accuracy,")\n", sep="")
+                        next
+                      }
+                
+                      new_weights <- weights
+                      new_weights[j] <- weights[j] - weight_step
+                      new_accuracy <- fit_func(new_weights)
+                
+                      if ( new_accuracy > accuracy) {
+                        accuracy <- new_accuracy
+                        weights <- new_weights
+                        #cat("                :",weights)
+                        #cat(" (",accuracy,")\n", sep="")
+                        next
+                        }
+            }
+            # If the current accuracy is the same or less than the ideal accuracy
+            # then it hasn't improved and the algo is at a maximum
+            if (current_accuracy >= accuracy) accuracy_improved = FALSE
+            nsteps <- nsteps + 1
+        }
+                
+        #Accuracy no longer improved - compare the most recent maxima to the current global
+        # update the global if necessary
+        if ( accuracy > global_accuracy) {
+                global_accuracy <<- accuracy
+                global_weights <<- weights
+                #cat("      New Optima:",weights)
+                #cat(" (",accuracy,")\n", sep="")
+        }
+        
+        end_time <- Sys.time()
+        
+        rhc_table[i, "fitness"] <- accuracy
+        rhc_table[i, "start_time"] <- start_time
+        rhc_table[i, "end_time"] <- end_time
+        rhc_table[i, "iter_time"] <- difftime(end_time, start_time, units = "secs")
+        
+        start_time <<- Sys.time()
+        
+        cat("Random Restart No: ", i,  "Accuracy: ", accuracy, "; Number of steps: ", nsteps, "\n")
+# BACK TO THE BEGINNING WITH A RANDOM RESTART!
+}
+
+
+for (j in 1:10){
+    new_model$weights[[1]][[1]][,j] <- global_weights[(1 + 11*(j-1)):(11*j)]
+}
+# Weights for the output layer
+for(j in 1:3){
+    new_model$weights[[1]][[2]][,j] <- global_weights[((111 + 11*(j-1))):(110 + (11*j))]
+}
+
+train_pred <- compute(new_model, abalone_train_set[!names(abalone_train_set) %in% c("young" ,"middling", "old")])$net.result %>%
+    max.col %>%
+    factor
+
+train_acc <- confusionMatrix(train_pred, train_actual)$overall["Accuracy"]
+
+test_pred <- compute(new_model, abalone_test_set[!names(abalone_test_set) %in% c("young" ,"middling", "old")])$net.result %>%
+    max.col %>%
+    factor
+
+test_acc <- confusionMatrix(test_pred, test_actual)$overall["Accuracy"]
+
+acc_df <- readRDS(file.path("..", "output", "acc_df.rds"))
+
+acc_df <- acc_df %>%
+        mutate(rhc = c(train_acc,
+                      test_acc,
+                      random_restarts,
+                      sum(rhc_table$iter_time)))
+
+saveRDS(new_model, file.path("..", "output", "rhc_nn_model.rds"))
+# saveRDS(ga_result, file.path("..", "output", "rhc_nn.rds"))
+saveRDS(acc_df, file.path("..", "output", "acc_df.rds"))
+saveRDS(rhc_table, file.path("..", "output", " rhc_table.rds"))
+
+# prediction <- compute(model, testing_set[1:8])$net.result
+# classification <- apply(prediction, c(1), maxfactor)
+# prediction <- c('Diabetic', 'Normal')[classification]
+# result <- table(prediction,testing_set$Diagnosis)
+#
+# cat("  Testing Accuracy:",sum(prediction == testing_set$Diagnosis)/sum(result),"\n")
+#
+# CrossTable(x = testing_set$Diagnosis,
+#            y = prediction,
+#            prop.r = FALSE,
+#            prop.c = FALSE,
+#            prop.t = FALSE,
+#            prop.chisq = FALSE,
+#            dnn = c("Actual", "Prediction"))

@@ -1,6 +1,5 @@
-# Nathan Harmon
-# CS7641, Spring 2015, Randomized Optimization Assignment
-# Simulated Annealing Weighting of Pima Indians Neural Network
+# CS7641, Randomized Optimization Assignment
+# Simulated Annealing Weighting  Neural Network
 
 # Uncomment if you need to install
 #install.packages("GenSA")
@@ -10,92 +9,56 @@ require("GenSA")
 require("neuralnet")
 require("gmodels")
 
+#load the data
+abalone_test_set <- readRDS(file.path("..", "input",  "abalone_test_set.rds"))
+abalone_train_set <- readRDS(file.path("..", "input",  "abalone_train_set.rds"))
+
+model <- readRDS(file = file.path("..", "output", "nn-base.rds"))
+
+new_model <- model
+
+train_actual <- abalone_train_set %>%
+    select(young, middling, old) %>%
+    max.col %>%
+    factor
+
+test_actual <- abalone_test_set %>%
+    select(young, middling, old) %>%
+    max.col %>%
+    factor
+
+
 # Settings
 iterations <- 100
 
-# Functions
-normalize <- function(x) {
-  return ((x - min(x, na.rm=TRUE)) / (max(x, na.rm=TRUE) - min(x, na.rm=TRUE)))
-}
-
-maxfactor <- function(x) {
-  return(which(x == max(x)))
-}
-
-# Data is from:
-# https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.data
-pimadata <- read.csv("pima-indians-diabetes.data", 
-                     header = FALSE)
-
-# Column names are from:
-# https://archive.ics.uci.edu/ml/machine-learning-databases/pima-indians-diabetes/pima-indians-diabetes.names
-colnames(pimadata) <- c("Pregnancies",
-                        "GlucoseConcentration",
-                        "DiastolicBP",
-                        "TricepSkinFoldThickness",
-                        "TwoHrSerumInsulin",
-                        "BMI",
-                        "DiabetesPedigreeFunction",
-                        "Age",
-                        "Diagnosis")
-
-# Remove Observations with Missing Data
-pimadata <- pimadata[pimadata[2] != 0 &
-                       pimadata[3] != 0 &
-                       pimadata[4] != 0 &
-                       pimadata[5] != 0 &
-                       pimadata[6] != 0 &
-                       pimadata[7] != 0 &
-                       pimadata[8] != 0, ]
-
-# Normalize our data. Note this new set is not classified.
-pimadata_use <- as.data.frame(lapply(pimadata[1:8], scale))
-
-# Classify the data
-pimadata_use <- cbind(pimadata_use, pimadata$Diagnosis == 1)
-pimadata_use <- cbind(pimadata_use, pimadata$Diagnosis == 0)
-names(pimadata_use)[9] <- "Diabetic"
-names(pimadata_use)[10] <- "Normal"
-
-# Create our model, training and testing sets
-initial_model_set <- pimadata_use[1:(nrow(pimadata)-100), ]
-
-training_set <- pimadata_use[1:(nrow(pimadata)-100),1:8]
-training_set$Diagnosis <- as.factor(
-  as.integer(xor(1,pimadata$Diagnosis[1:(nrow(pimadata)-100)])))
-levels(training_set$Diagnosis) <- c("Diabetic", "Normal")
-
-testing_set <- pimadata_use[(nrow(pimadata)-99):nrow(pimadata),1:8]
-testing_set$Diagnosis <- as.factor(
-  as.integer(xor(1,pimadata$Diagnosis[(nrow(pimadata)-99):nrow(pimadata)])))
-levels(testing_set$Diagnosis) <- c("Diabetic", "Normal")
-
-# Create our neural network model
-model <- neuralnet(Diabetic+Normal ~
-                     Pregnancies + 
-                     GlucoseConcentration + 
-                     DiastolicBP +
-                     TricepSkinFoldThickness + 
-                     TwoHrSerumInsulin + 
-                     BMI +
-                     DiabetesPedigreeFunction + 
-                     Age,
-                   data = initial_model_set,
-                   hidden = 0)
-
 # Neural Network as Fitness Function
 
-fit_func <- function(string=c()) {
-  model$weights[[1]][[1]][,1] <- string[1:9]
-  model$weights[[1]][[1]][,2] <- string[10:18]
-  prediction <- compute(model, training_set[1:8])$net.result
-  classification <- apply(prediction, c(1), maxfactor)
-  prediction <- c('Diabetic', 'Normal')[classification]
-  result <- table(prediction,training_set$Diagnosis)
-  return(sum(prediction != testing_set$Diagnosis)/sum(result))
+fit_func_edit <- function(string=c()) {
+
+    # Weights for the hidden layer
+    for (j in 1:10){
+        new_model$weights[[1]][[1]][,j] <- string[(1 + 11*(j-1)):(11*j)]
+    }
+    # Weights for the output layer
+    for(j in 1:3){
+        new_model$weights[[1]][[2]][,j] <- string[((111 + 11*(j-1))):(110 + (11*j))]
+    }
+
+    prediction <- compute(new_model,
+                          abalone_train_set[!names(abalone_train_set) %in% c("young" ,"middling", "old")])$net.result %>%
+        max.col %>%
+        factor
+
+    return(confusionMatrix(prediction, train_actual)$overall["Accuracy"])
 }
 
-ptm <- proc.time()
+sa_table <- data.frame(iteration = 1:iterations,
+                       fitness_mean = NA,
+                       fitness_max = NA,
+                       start_time =  .POSIXct(rep(NA, iterations)),
+                       end_time =  .POSIXct(rep(NA, iterations)),
+                       iter_time = NA)
+
 
 set.seed(1234)
 global.min <- 0
@@ -122,10 +85,10 @@ result <- table(prediction,testing_set$Diagnosis)
 
 cat("        Accuracy:",sum(prediction == testing_set$Diagnosis)/sum(result),"\n")
 
-CrossTable(x = testing_set$Diagnosis, 
+CrossTable(x = testing_set$Diagnosis,
            y = prediction,
            prop.r = FALSE,
            prop.c = FALSE,
            prop.t = FALSE,
            prop.chisq = FALSE,
-           dnn = c("Actual", "Prediction"))  
+           dnn = c("Actual", "Prediction"))
