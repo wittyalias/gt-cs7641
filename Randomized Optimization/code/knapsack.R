@@ -1,11 +1,10 @@
-# Nathan Harmon
-# CS7641, Spring 2015, Randomized Optimization Assignment
+# CS7641,  Randomized Optimization Assignment
 # Knapsack Problem - RHC, SA, GA
 
 #install.packages("GA")
 require("GA")
 
-set.seed = 1234
+set.seed(1234)
 
 sack_weight_limit <- 1500
 

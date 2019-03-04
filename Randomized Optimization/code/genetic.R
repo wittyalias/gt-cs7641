@@ -8,14 +8,10 @@
 library("dplyr")
 library("GA")
 library("neuralnet")
-#library("gmodels")
 library("caret")
 
 
-# tryCatch(
-#     setwd(dirname(parent.frame(2)$ofile)),
-#     error = function(e) {setwd("code")}
-# )
+set.seed(12345)
 
 #load the data
 abalone_test_set <- readRDS(file.path("..", "input",  "abalone_test_set.rds"))
@@ -115,7 +111,7 @@ ga_result <- ga(type = "real-valued",
                 popSize = 1000,
                 maxiter = iterations,
                 monitor = monitor_func,
-                run = 75)
+                run = 150)
 
 # Get rid of any of the empty spaces in the table
 ga_table <- ga_table[complete.cases(ga_table),]

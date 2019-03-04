@@ -1,15 +1,9 @@
 # CS7641, Randomized Optimization Assignment
 # Simulated Annealing Weighting 
 
-# Uncomment if you need to install
-#install.packages("neuralnet")
-#install.packages("gmodels")
-
+library("dplyr")
 library("neuralnet")
 library("caret")
-library("gtools")
-
-
 
 set.seed(12345)
 
@@ -33,26 +27,13 @@ test_actual <- abalone_test_set %>%
     max.col %>%
     factor
 
-
-# Neural Network as Fitness Function
-
-# fit_func <- function(string=c()) {
-#   model$weights[[1]][[1]][,1] <- string[1:9]
-#   model$weights[[1]][[1]][,2] <- string[10:18]
-#   prediction <- compute(model, training_set[1:8])$net.result
-#   classification <- apply(prediction, c(1), maxfactor)
-#   prediction <- c('Diabetic', 'Normal')[classification]
-#   result <- table(prediction,training_set$Diagnosis)
-#   return(sum(prediction == training_set$Diagnosis)/sum(result))
-# }
-
 fit_func <- function(string=c()) {
 
-    # Weights for the hidden layer
+    # Weights for the hidden layer - 10 nodes
     for (j in 1:10){
         new_model$weights[[1]][[1]][,j] <<- string[(1 + 11*(j-1)):(11*j)]
     }
-    # Weights for the output layer
+    # Weights for the output layer - 3 nodes
     for(j in 1:3){
         new_model$weights[[1]][[2]][,j] <<- string[((111 + 11*(j-1))):(110 + (11*j))]
     }
@@ -80,11 +61,7 @@ rhc_table <- data.frame(iteration = 1:random_restarts,
 
 global_accuracy <- 0
 # global_weights <- list()
-weight_step <- 0.1
-
-# ptm <- proc.time()
-
-
+weight_step <- 1
 
 
 for (i in 1:random_restarts) {
@@ -93,11 +70,7 @@ for (i in 1:random_restarts) {
         weights <- runif(143, min = -2, max = 2)
         accuracy <- fit_func(weights)
         current_accuracy <- accuracy
-        #cat("---------------------------------------------------\n")
-        #cat("New Random Start:",weights)
-        #cat(" (",accuracy,")\n", sep="")
-        
-        
+
         # Then look at each weight, add some small amount to it and check the accuracy
         # if the accuracy is better, adjust the weight -> move in that direction on the
         # fitness function.
@@ -161,7 +134,7 @@ for (i in 1:random_restarts) {
 # BACK TO THE BEGINNING WITH A RANDOM RESTART!
 }
 
-
+#Assign the best weights and then evaluate them compared to actual training and test 
 for (j in 1:10){
     new_model$weights[[1]][[1]][,j] <- global_weights[(1 + 11*(j-1)):(11*j)]
 }
@@ -194,18 +167,3 @@ saveRDS(new_model, file.path("..", "output", "rhc_nn_model.rds"))
 # saveRDS(ga_result, file.path("..", "output", "rhc_nn.rds"))
 saveRDS(acc_df, file.path("..", "output", "acc_df.rds"))
 saveRDS(rhc_table, file.path("..", "output", " rhc_table.rds"))
-
-# prediction <- compute(model, testing_set[1:8])$net.result
-# classification <- apply(prediction, c(1), maxfactor)
-# prediction <- c('Diabetic', 'Normal')[classification]
-# result <- table(prediction,testing_set$Diagnosis)
-#
-# cat("  Testing Accuracy:",sum(prediction == testing_set$Diagnosis)/sum(result),"\n")
-#
-# CrossTable(x = testing_set$Diagnosis,
-#            y = prediction,
-#            prop.r = FALSE,
-#            prop.c = FALSE,
-#            prop.t = FALSE,
-#            prop.chisq = FALSE,
-#            dnn = c("Actual", "Prediction"))

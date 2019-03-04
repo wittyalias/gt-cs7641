@@ -1,5 +1,5 @@
-# Nathan Harmon
-# CS7641, Spring 2015, Randomized Optimization Assignment
+
+# CS7641, Randomized Optimization Assignment
 # Traveling Salesman Problem
 
 #install.packages("GA")
@@ -129,13 +129,10 @@ cat("Genetic Algorithm\n")
 
 ptm <- proc.time()
 
-min <- c(1,1,1,1,1,1,1,1,1,1,1,1)
-max <- min*12
-
 ga_result <- ga(type="permutation",
                 travel_dist,
-                min=min,
-                max=max,
+                lower = rep(1, times = 12),
+                upper = rep(12, times = 12),
                 #monitor=NULL,
                 popSize=100,
                 maxiter = iterations)

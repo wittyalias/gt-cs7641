@@ -1,11 +1,11 @@
-# Nathan Harmon
-# CS7641, Spring 2015, Randomized Optimization Assignment
+# CS7641, Randomized Optimization Assignment
 # Four Peaks Problem - RHC, SA, GA
 
 #install.packages("GA")
 require("GA")
 
-set.seed = 1234
+set.seed(1234)
+
 string_length = 20
 t <- 2
 iterations = 3

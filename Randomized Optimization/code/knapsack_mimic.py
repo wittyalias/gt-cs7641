@@ -1,5 +1,5 @@
-# Nathan Harmon
-# CS7641, Spring 2015, Randomized Optimization Assignment
+
+# CS7641,  Randomized Optimization Assignment
 # Knapsack Problem - MIMIC
 from mimicry import Mimic
 

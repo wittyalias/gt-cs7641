@@ -3,6 +3,8 @@ library("neuralnet")
 library("dplyr")
 library("caret")
 
+set.seed(12345)
+
 #load the data
 abalone_test_set <- readRDS(file.path("..", "input",  "abalone_test_set.rds"))
 abalone_train_set <- readRDS(file.path("..", "input",  "abalone_train_set.rds"))
@@ -43,8 +45,8 @@ model_results <- model$net.result[[1]] %>%
 
 train_acc <- confusionMatrix(model_results, train_actual)$overall["Accuracy"]
 test_acc <- confusionMatrix(nn_test_results, test_actual)$overall["Accuracy"]
-acc_df <- data.frame(Metric = c("Training Error", 
-                                "Test Error", 
+acc_df <- data.frame(Metric = c("Training Accuracy", 
+                                "Test Accuracy", 
                                 "Iterations", 
                                 "Total time"), 
                      nn_base = c(train_acc, 
@@ -52,6 +54,8 @@ acc_df <- data.frame(Metric = c("Training Error",
                                  model$result.matrix["steps",], 
                                  difftime(end_time, start_time, units = "secs")))
 
+
+orig_model <- readRDS(file.path("..", "output", "nn-base.rds"))
 
 saveRDS(model, file.path("..", "output", "nn-base.rds"))
 saveRDS(acc_df, file.path("..", "output", "acc_df.rds"))
