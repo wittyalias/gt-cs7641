@@ -104,7 +104,7 @@ CrossTable(x = pimadata_use$Diagnosis-1,
            dnn = c("Diagnosis", "k-Means"))
 
 # Graph points and label from k-Means cluster
-clusplot(pimadata_use[,1:8], kmeans_cluster, 
+clusplot(x = pimadata_use[,1:8], clus = kmeans_cluster, 
          color=TRUE, shade=TRUE, 
          labels=4, lines=0, xlim=c(-6,4), ylim=c(-6,6),
          main=NULL,xlab='',ylab='',sub=NULL)
@@ -128,7 +128,7 @@ CrossTable(x = pimadata_use$Diagnosis-1,
            dnn = c("Diagnosis", "EM"))
 
 # Graph points and label from k-Means cluster
-clusplot(pimadata_use[,1:8], em_cluster, 
+clusplot(x = pimadata_use[,1:8], clus = em_cluster, 
          color=TRUE, shade=TRUE, 
          labels=4, lines=0, xlim=c(-6,4), ylim=c(-6,6),
          main=NULL,xlab='',ylab='',sub=NULL)
