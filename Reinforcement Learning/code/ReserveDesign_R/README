@@ -1,0 +1,34 @@
+This directory contains code to illustrate the use of MDPtoolbox to solve
+a dynamic reserve design problem.
+
+___________________________________________________________________________
+* The problem *
+To reduce biodiversity loss, reserves are created acquiring land through time. 
+The problem is to design a dynamic reserve selection policy that maximizes the expected number of species preserved over time.
+For a detailed description, see Costello, C. and Polasky, S. 2004. Dynamic reserve site selection. resour Energy Econ 26:157-174.
+
+___________________________________________________________________________
+* MDP modelization *
+Available sites are irreversibly developed each year with a given probability.
+Only a limited number of sites can be reserved each year.
+See the complete description in Sabbadin, R. et al. 2007. Dynamic reserve site selection under contagion risk of deforestation. Ecol. Model. 201:75-81.
+
+___________________________________________________________________________
+* Install the MDPtoolbox *
+Follow the instructions of the Download page of the toolbox website:
+http://www7.inra.fr/mia/T/MDPtoolbox/Install.html
+
+___________________________________________________________________________
+* Run the resolution *
+Download the ReserveDesign file corresponding to the required scientific environment from the Forge page:
+https://mulcyber.toulouse.inra.fr/frs/?group_id=11
+
+Decompress files (with unzip or tar xzvf).
+
+In the ReserveDesign directory, launch R/Matlab/GNU Octave/Scilab.
+
+In Matlab, GNU Octave,add the path to the MDPtoolbox directory (to access the toolbox functions mdp_check and mdp_value_iteration) in the run.m script. 
+
+Execute the run script to find an optimal policy to preserved 20 species and visualize a management simulation when the initial state is “all sites available”.
+
+
